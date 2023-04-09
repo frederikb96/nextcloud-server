@@ -1,3 +1,6 @@
 [submodule "3rdparty"]
 	path = 3rdparty
 	url = https://github.com/nextcloud/3rdparty.git
+[submodule "MvSharedPics"]
+	path = custom_apps/mvsharedpics
+	url = git@gitlab.com:frederikb96/move-shared-pictures.git

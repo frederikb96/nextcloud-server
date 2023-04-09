@@ -4,3 +4,6 @@
 [submodule "MvSharedPics"]
 	path = custom_apps/mvsharedpics
 	url = git@gitlab.com:frederikb96/move-shared-pictures.git
+[submodule "Memories"]
+	path = custom_apps/memories
+	url = https://github.com/pulsejet/memories.git

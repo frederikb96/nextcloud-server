@@ -3,7 +3,7 @@
 	url = https://github.com/nextcloud/3rdparty.git
 [submodule "MvSharedPics"]
 	path = custom_apps/mvsharedpics
-	url = git@gitlab.com:frederikb96/move-shared-pictures.git
+	url = git@gitlab.com:frederikb96/nextcloud-mvsharedpics.git
 [submodule "Memories"]
 	path = custom_apps/memories
 	url = https://github.com/pulsejet/memories.git

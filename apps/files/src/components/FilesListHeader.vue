@@ -1,7 +1,7 @@
 <!--
-  - @copyright Copyright (c) 2019 Gary Kim <gary@garykim.dev>
+  - @copyright Copyright (c) 2023 John Molakvoæ <skjnldsv@protonmail.com>
   -
-  - @author Gary Kim <gary@garykim.dev>
+  - @author John Molakvoæ <skjnldsv@protonmail.com>
   -
   - @license GNU AGPL version 3 or any later version
   -
@@ -102,6 +102,10 @@ export default Vue.extend({
 			type: Array,
 			required: true,
 		},
+		filesListWidth: {
+			type: Number,
+			default: 0,
+		},
 	},
 
 	setup() {
@@ -123,6 +127,10 @@ export default Vue.extend({
 		},
 
 		columns() {
+			// Hide columns if the list is too small
+			if (this.filesListWidth < 512) {
+				return []
+			}
 			return this.currentView?.columns || []
 		},
 
@@ -183,6 +191,7 @@ export default Vue.extend({
 			if (selected) {
 				const selection = this.nodes.map(node => node.attributes.fileid.toString())
 				logger.debug('Added all nodes to selection', { selection })
+				this.selectionStore.setLastIndex(null)
 				this.selectionStore.set(selection)
 			} else {
 				logger.debug('Cleared selection')
@@ -206,7 +215,6 @@ export default Vue.extend({
 </script>
 
 <style scoped lang="scss">
-@import '../mixins/fileslist-row.scss';
 .files-list__column {
 	user-select: none;
 	// Make sure the cell colors don't apply to column headers

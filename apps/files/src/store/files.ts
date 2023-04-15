@@ -27,6 +27,7 @@ import { defineStore } from 'pinia'
 import { subscribe } from '@nextcloud/event-bus'
 import Vue from 'vue'
 import logger from '../logger'
+import { FileId } from '../types'
 
 export const useFilesStore = () => {
 	const store = defineStore('files', {
@@ -39,13 +40,13 @@ export const useFilesStore = () => {
 			/**
 			 * Get a file or folder by id
 			 */
-			getNode: (state)  => (id: number): Node|undefined => state.files[id],
+			getNode: (state)  => (id: FileId): Node|undefined => state.files[id],
 
 			/**
 			 * Get a list of files or folders by their IDs
 			 * Does not return undefined values
 			 */
-			getNodes: (state) => (ids: number[]): Node[] => ids
+			getNodes: (state) => (ids: FileId[]): Node[] => ids
 				.map(id => state.files[id])
 				.filter(Boolean),
 			/**
@@ -81,34 +82,21 @@ export const useFilesStore = () => {
 				Vue.set(this.roots, service, root)
 			},
 
-			onCreatedNode() {
-				// TODO: do something
-			},
-
 			onDeletedNode(node: Node) {
 				this.deleteNodes([node])
-			},
-
-			onMovedNode() {
-				// TODO: do something
 			},
 		}
 	})
 
 	const fileStore = store()
 	// Make sure we only register the listeners once
-	if (!fileStore.initialized) {
-		subscribe('files:file:created', fileStore.onCreatedNode)
-		subscribe('files:file:deleted', fileStore.onDeletedNode)
-		subscribe('files:file:moved', fileStore.onMovedNode)
-		// subscribe('files:file:updated', fileStore.onUpdatedNode)
+	if (!fileStore._initialized) {
+		// subscribe('files:node:created', fileStore.onCreatedNode)
+		subscribe('files:node:deleted', fileStore.onDeletedNode)
+		// subscribe('files:node:moved', fileStore.onMovedNode)
+		// subscribe('files:node:updated', fileStore.onUpdatedNode)
 
-		subscribe('files:folder:created', fileStore.onCreatedNode)
-		subscribe('files:folder:deleted', fileStore.onDeletedNode)
-		subscribe('files:folder:moved', fileStore.onMovedNode)
-		// subscribe('files:folder:updated', fileStore.onUpdatedNode)
-
-		fileStore.initialized = true
+		fileStore._initialized = true
 	}
 
 	return fileStore

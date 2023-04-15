@@ -25,6 +25,7 @@ import type { PathOptions, ServicesState } from '../types.ts'
 import { defineStore } from 'pinia'
 import Vue from 'vue'
 import { subscribe } from '@nextcloud/event-bus'
+import { FileId } from '../types'
 
 export const usePathsStore = () => {
 	const store = defineStore('paths', {
@@ -32,7 +33,7 @@ export const usePathsStore = () => {
 
 		getters: {
 			getPath: (state) => {
-				return (service: string, path: string): number|undefined => {
+				return (service: string, path: string): FileId|undefined => {
 					if (!state[service]) {
 						return undefined
 					}
@@ -56,13 +57,13 @@ export const usePathsStore = () => {
 
 	const pathsStore = store()
 	// Make sure we only register the listeners once
-	if (!pathsStore.initialized) {
+	if (!pathsStore._initialized) {
 		// TODO: watch folders to update paths?
-		// subscribe('files:folder:created', pathsStore.onCreatedNode)
-		// subscribe('files:folder:deleted', pathsStore.onDeletedNode)
-		// subscribe('files:folder:moved', pathsStore.onMovedNode)
+		// subscribe('files:node:created', pathsStore.onCreatedNode)
+		// subscribe('files:node:deleted', pathsStore.onDeletedNode)
+		// subscribe('files:node:moved', pathsStore.onMovedNode)
 
-		pathsStore.initialized = true
+		pathsStore._initialized = true
 	}
 
 	return pathsStore

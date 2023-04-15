@@ -1,7 +1,7 @@
 <!--
-  - @copyright Copyright (c) 2019 Gary Kim <gary@garykim.dev>
+  - @copyright Copyright (c) 2023 John Molakvoæ <skjnldsv@protonmail.com>
   -
-  - @author Gary Kim <gary@garykim.dev>
+  - @author John Molakvoæ <skjnldsv@protonmail.com>
   -
   - @license GNU AGPL version 3 or any later version
   -
@@ -36,6 +36,8 @@
 			<FileEntry :active="active"
 				:index="index"
 				:is-size-available="isSizeAvailable"
+				:files-list-width="filesListWidth"
+				:nodes="nodes"
 				:source="item" />
 		</template>
 
@@ -47,12 +49,17 @@
 			</caption>
 
 			<!-- Thead-->
-			<FilesListHeader :is-size-available="isSizeAvailable" :nodes="nodes" />
+			<FilesListHeader :files-list-width="filesListWidth"
+				:is-size-available="isSizeAvailable"
+				:nodes="nodes" />
 		</template>
 
 		<template #after>
 			<!-- Tfoot-->
-			<FilesListFooter :is-size-available="isSizeAvailable" :nodes="nodes" :summary="summary" />
+			<FilesListFooter :files-list-width="filesListWidth"
+				:is-size-available="isSizeAvailable"
+				:nodes="nodes"
+				:summary="summary" />
 		</template>
 	</RecycleScroller>
 </template>
@@ -65,6 +72,7 @@ import Vue from 'vue'
 import FileEntry from './FileEntry.vue'
 import FilesListFooter from './FilesListFooter.vue'
 import FilesListHeader from './FilesListHeader.vue'
+import filesListWidthMixin from '../mixins/filesListWidth.ts'
 
 export default Vue.extend({
 	name: 'FilesListVirtual',
@@ -75,6 +83,10 @@ export default Vue.extend({
 		FilesListHeader,
 		FilesListFooter,
 	},
+
+	mixins: [
+		filesListWidthMixin,
+	],
 
 	props: {
 		currentView: {
@@ -110,6 +122,10 @@ export default Vue.extend({
 			return translate('files', '{summaryFile} and {summaryFolder}', this)
 		},
 		isSizeAvailable() {
+			// Hide size column on narrow screens
+			if (this.filesListWidth < 768) {
+				return false
+			}
 			return this.nodes.some(node => node.attributes.size !== undefined)
 		},
 	},
@@ -165,11 +181,6 @@ export default Vue.extend({
 			background-color: var(--color-main-background);
 		}
 
-		/**
-		 * Common row styling. tr are handled by
-		 * vue-virtual-scroller, so we need to
-		 * have those rules in here.
-		 */
 		tr {
 			position: absolute;
 			display: flex;
@@ -177,7 +188,151 @@ export default Vue.extend({
 			width: 100%;
 			border-bottom: 1px solid var(--color-border);
 		}
+
+		td, th {
+			display: flex;
+			align-items: center;
+			flex: 0 0 auto;
+			justify-content: left;
+			width: var(--row-height);
+			height: var(--row-height);
+			margin: 0;
+			padding: 0;
+			color: var(--color-text-maxcontrast);
+			border: none;
+
+			// Columns should try to add any text
+			// node wrapped in a span. That should help
+			// with the ellipsis on overflow.
+			span {
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+			}
+		}
+
+		.files-list__row-checkbox {
+			justify-content: center;
+			.checkbox-radio-switch {
+				display: flex;
+				justify-content: center;
+
+				--icon-size: var(--checkbox-size);
+
+				label.checkbox-radio-switch__label {
+					width: var(--clickable-area);
+					height: var(--clickable-area);
+					margin: 0;
+					padding: calc((var(--clickable-area) - var(--checkbox-size)) / 2);
+				}
+
+				.checkbox-radio-switch__icon {
+					margin: 0 !important;
+				}
+			}
+		}
+
+		.files-list__row-icon {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: var(--icon-preview-size);
+			height: 100%;
+			// Show same padding as the checkbox right padding for visual balance
+			margin-right: var(--checkbox-padding);
+			color: var(--color-primary-element);
+			// No shrinking or growing allowed
+			flex: 0 0 var(--icon-preview-size);
+
+			& > span {
+				justify-content: flex-start;
+			}
+
+			svg {
+				width: var(--icon-preview-size);
+				height: var(--icon-preview-size);
+			}
+
+			&-preview {
+				overflow: hidden;
+				width: var(--icon-preview-size);
+				height: var(--icon-preview-size);
+				border-radius: var(--border-radius);
+				background-repeat: no-repeat;
+				// Center and contain the preview
+				background-position: center;
+				background-size: contain;
+			}
+		}
+
+		.files-list__row-name {
+			// Prevent link from overflowing
+			overflow: hidden;
+			// Take as much space as possible
+			flex: 1 1 auto;
+
+			a {
+				display: flex;
+				align-items: center;
+				// Fill cell height and width
+				width: 100%;
+				height: 100%;
+
+				// Keyboard indicator a11y
+				&:focus .files-list__row-name-text,
+				&:focus-visible .files-list__row-name-text {
+					outline: 2px solid var(--color-main-text) !important;
+					border-radius: 20px;
+				}
+			}
+
+			.files-list__row-name-text {
+				// Make some space for the outline
+				padding: 5px 10px;
+				margin-left: -10px;
+			}
+		}
+
+		.files-list__row-actions {
+			width: auto;
+
+			// Add margin to all cells after the actions
+			& ~ td,
+			& ~ th {
+				margin: 0 var(--cell-margin);
+			}
+
+			button {
+				.button-vue__text {
+					// Remove bold from default button styling
+					font-weight: normal;
+				}
+				&:not(:hover, :focus, :active) .button-vue__wrapper {
+					// Also apply color-text-maxcontrast to non-active button
+					color: var(--color-text-maxcontrast);
+				}
+			}
+		}
+
+		.files-list__row-size {
+			// Right align text
+			justify-content: flex-end;
+			width: calc(var(--row-height) * 1.5);
+			// opacity varies with the size
+			color: var(--color-main-text);
+
+			// Icon is before text since size is right aligned
+			.files-list__column-sort-button {
+				padding: 0 16px 0 4px !important;
+				.button-vue__wrapper {
+					flex-direction: row;
+				}
+			}
+		}
+
+		.files-list__row-column-custom {
+			width: calc(var(--row-height) * 2);
+		}
 	}
 }
-
 </style>

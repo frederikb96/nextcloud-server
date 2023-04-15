@@ -1,7 +1,7 @@
 <!--
-  - @copyright Copyright (c) 2019 Gary Kim <gary@garykim.dev>
+  - @copyright Copyright (c) 2023 John Molakvoæ <skjnldsv@protonmail.com>
   -
-  - @author Gary Kim <gary@garykim.dev>
+  - @author John Molakvoæ <skjnldsv@protonmail.com>
   -
   - @license GNU AGPL version 3 or any later version
   -
@@ -38,7 +38,8 @@
 		<td class="files-list__row-actions" />
 
 		<!-- Size -->
-		<td v-if="isSizeAvailable" class="files-list__column files-list__row-size">
+		<td v-if="isSizeAvailable"
+			class="files-list__column files-list__row-size">
 			<span>{{ totalSize }}</span>
 		</td>
 
@@ -78,6 +79,10 @@ export default Vue.extend({
 			type: String,
 			default: '',
 		},
+		filesListWidth: {
+			type: Number,
+			default: 0,
+		},
 	},
 
 	setup() {
@@ -112,6 +117,10 @@ export default Vue.extend({
 		},
 
 		columns() {
+			// Hide columns if the list is too small
+			if (this.filesListWidth < 512) {
+				return []
+			}
 			return this.currentView?.columns || []
 		},
 
@@ -140,8 +149,6 @@ export default Vue.extend({
 </script>
 
 <style scoped lang="scss">
-@import '../mixins/fileslist-row.scss';
-
 // Scoped row
 tr {
 	padding-bottom: 300px;

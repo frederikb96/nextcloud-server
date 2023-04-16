@@ -7,3 +7,6 @@
 [submodule "Memories"]
 	path = custom_apps/memories
 	url = https://github.com/pulsejet/memories.git
+[submodule "Circles"]
+	path = apps/circles
+	url = git@github.com:nextcloud/circles.git

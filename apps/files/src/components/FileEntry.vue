@@ -1,7 +1,7 @@
 <!--
-  - @copyright Copyright (c) 2019 Gary Kim <gary@garykim.dev>
+  - @copyright Copyright (c) 2023 John Molakvoæ <skjnldsv@protonmail.com>
   -
-  - @author Gary Kim <gary@garykim.dev>
+  - @author John Molakvoæ <skjnldsv@protonmail.com>
   -
   - @license GNU AGPL version 3 or any later version
   -
@@ -25,9 +25,10 @@
 		<td class="files-list__row-checkbox">
 			<NcCheckboxRadioSwitch v-if="active"
 				:aria-label="t('files', 'Select the row for {displayName}', { displayName })"
-				:checked.sync="selectedFiles"
-				:value="fileid.toString()"
-				name="selectedFiles" />
+				:checked="selectedFiles"
+				:value="fileid"
+				name="selectedFiles"
+				@update:checked="onSelectionChange" />
 		</td>
 
 		<!-- Link to file -->
@@ -63,8 +64,10 @@
 			<!-- Menu actions -->
 			<NcActions v-if="active"
 				ref="actionsMenu"
+				:disabled="source._loading"
 				:force-title="true"
-				:inline="enabledInlineActions.length">
+				:inline="enabledInlineActions.length"
+				:open.sync="openedMenu">
 				<NcActionButton v-for="action in enabledMenuActions"
 					:key="action.id"
 					:class="'files-list__row-action-' + action.id"
@@ -101,7 +104,7 @@
 <script lang='ts'>
 import { debounce } from 'debounce'
 import { formatFileSize } from '@nextcloud/files'
-import { Fragment } from 'vue-fragment'
+import { Fragment } from 'vue-frag'
 import { join } from 'path'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { translate } from '@nextcloud/l10n'
@@ -114,9 +117,11 @@ import NcCheckboxRadioSwitch from '@nextcloud/vue/dist/Components/NcCheckboxRadi
 import NcLoadingIcon from '@nextcloud/vue/dist/Components/NcLoadingIcon.js'
 import Vue from 'vue'
 
-import { isCachedPreview } from '../services/PreviewService.ts'
 import { getFileActions } from '../services/FileAction.ts'
+import { isCachedPreview } from '../services/PreviewService.ts'
+import { useActionsMenuStore } from '../store/actionsmenu.ts'
 import { useFilesStore } from '../store/files.ts'
+import { useKeyboardStore } from '../store/keyboard.ts'
 import { useSelectionStore } from '../store/selection.ts'
 import { useUserConfigStore } from '../store/userconfig.ts'
 import CustomElementRender from './CustomElementRender.vue'
@@ -158,14 +163,26 @@ export default Vue.extend({
 			type: Number,
 			required: true,
 		},
+		nodes: {
+			type: Array,
+			required: true,
+		},
+		filesListWidth: {
+			type: Number,
+			default: 0,
+		},
 	},
 
 	setup() {
+		const actionsMenuStore = useActionsMenuStore()
 		const filesStore = useFilesStore()
+		const keyboardStore = useKeyboardStore()
 		const selectionStore = useSelectionStore()
 		const userConfigStore = useUserConfigStore()
 		return {
+			actionsMenuStore,
 			filesStore,
+			keyboardStore,
 			selectionStore,
 			userConfigStore,
 		}
@@ -189,6 +206,10 @@ export default Vue.extend({
 		},
 
 		columns() {
+			// Hide columns if the list is too small
+			if (this.filesListWidth < 512) {
+				return []
+			}
 			return this.currentView?.columns || []
 		},
 
@@ -198,7 +219,7 @@ export default Vue.extend({
 		},
 
 		fileid() {
-			return this.source.attributes.fileid
+			return this.source?.fileid?.toString?.()
 		},
 		displayName() {
 			return this.source.attributes.displayName
@@ -241,14 +262,11 @@ export default Vue.extend({
 			}
 		},
 
-		selectedFiles: {
-			get() {
-				return this.selectionStore.selected
-			},
-			set(selection) {
-				logger.debug('Changed nodes selection', { selection })
-				this.selectionStore.set(selection)
-			},
+		selectedFiles() {
+			return this.selectionStore.selected
+		},
+		isSelected() {
+			return this.selectedFiles.includes(this.source?.fileid?.toString?.())
 		},
 
 		cropPreviews() {
@@ -285,18 +303,34 @@ export default Vue.extend({
 		},
 
 		enabledInlineActions() {
+			if (this.filesListWidth < 768) {
+				return []
+			}
 			return this.enabledActions.filter(action => action?.inline?.(this.source, this.currentView))
 		},
 
 		enabledMenuActions() {
+			if (this.filesListWidth < 768) {
+				return this.enabledActions
+			}
+
 			return [
 				...this.enabledInlineActions,
-				...actions.filter(action => !action.inline),
+				...this.enabledActions.filter(action => !action.inline),
 			]
 		},
 
 		uniqueId() {
 			return this.hashCode(this.source.source)
+		},
+
+		openedMenu: {
+			get() {
+				return this.actionsMenuStore.opened === this.uniqueId
+			},
+			set(opened) {
+				this.actionsMenuStore.opened = opened ? this.uniqueId : null
+			},
 		},
 	},
 
@@ -339,6 +373,9 @@ export default Vue.extend({
 
 		// Fetch the preview on init
 		this.debounceIfNotCached()
+
+		// Right click watcher on tr
+		this.$el.parentNode?.addEventListener?.('contextmenu', this.onRightClick)
 	},
 
 	beforeDestroy() {
@@ -407,7 +444,7 @@ export default Vue.extend({
 			this.clearImg()
 
 			// Close menu
-			this.$refs?.actionsMenu?.closeMenu?.()
+			this.openedMenu = false
 		},
 
 		clearImg() {
@@ -433,7 +470,10 @@ export default Vue.extend({
 		async onActionClick(action) {
 			const displayName = action.displayName([this.source], this.currentView)
 			try {
+				// Set the loading marker
 				this.loading = action.id
+				Vue.set(this.source, '_loading', true)
+
 				const success = await action.exec(this.source, this.currentView)
 				if (success) {
 					showSuccess(this.t('files', '"{displayName}" action executed successfully', { displayName }))
@@ -444,8 +484,57 @@ export default Vue.extend({
 				logger.error('Error while executing action', { action, e })
 				showError(this.t('files', '"{displayName}" action failed', { displayName }))
 			} finally {
+				// Reset the loading marker
 				this.loading = ''
+				Vue.set(this.source, '_loading', false)
 			}
+		},
+
+		onSelectionChange(selection) {
+			const newSelectedIndex = this.index
+			const lastSelectedIndex = this.selectionStore.lastSelectedIndex
+
+			// Get the last selected and select all files in between
+			if (this.keyboardStore?.shiftKey && lastSelectedIndex !== null) {
+				const isAlreadySelected = this.selectedFiles.includes(this.fileid)
+
+				const start = Math.min(newSelectedIndex, lastSelectedIndex)
+				const end = Math.max(lastSelectedIndex, newSelectedIndex)
+
+				const lastSelection = this.selectionStore.lastSelection
+				const filesToSelect = this.nodes
+					.map(file => file.fileid?.toString?.())
+					.slice(start, end + 1)
+
+				// If already selected, update the new selection _without_ the current file
+				const selection = [...lastSelection, ...filesToSelect]
+					.filter(fileId => !isAlreadySelected || fileId !== this.fileid)
+
+				logger.debug('Shift key pressed, selecting all files in between', { start, end, filesToSelect, isAlreadySelected })
+				// Keep previous lastSelectedIndex to be use for further shift selections
+				this.selectionStore.set(selection)
+				return
+			}
+
+			logger.debug('Updating selection', { selection })
+			this.selectionStore.set(selection)
+			this.selectionStore.setLastIndex(newSelectedIndex)
+		},
+
+		// Open the actions menu on right click
+		onRightClick(event) {
+			// If already opened, fallback to default browser
+			if (this.openedMenu) {
+				return
+			}
+
+			// If the clicked row is in the selection, open global menu
+			const isMoreThanOneSelected = this.selectedFiles.length > 1
+			this.actionsMenuStore.opened = this.isSelected && isMoreThanOneSelected ? 'global' : this.uniqueId
+
+			// Prevent any browser defaults
+			event.preventDefault()
+			event.stopPropagation()
 		},
 
 		t: translate,
@@ -455,8 +544,6 @@ export default Vue.extend({
 </script>
 
 <style scoped lang='scss'>
-@import '../mixins/fileslist-row.scss';
-
 /* Hover effect on tbody lines only */
 tr {
 	&:hover,

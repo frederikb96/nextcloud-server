@@ -33,7 +33,8 @@ RUN apt-get install --no-install-recommends -y \
     curl \
     lsof \
     make \
-	unzip
+	unzip \
+    wget
 
 # Composer
 RUN curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php && \

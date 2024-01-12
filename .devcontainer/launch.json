@@ -9,6 +9,24 @@
             "type": "php",
             "request": "launch",
             "port": 9003
+        },
+        {
+            "name": "Launch Chrome for Nextcloud Memories App",
+            "type": "chrome",
+            "request": "launch",
+            "runtimeArgs": [
+                "--disable-web-security",
+                "--user-data-dir"
+              ],
+            "url": "http://localhost/index.php/apps/memories/",
+            "webRoot": "${workspaceFolder}/custom_apps/memories",
+            "sourceMaps": true,
+            "pathMapping": {
+                "/var/www/html/custom_apps/memories": "${workspaceFolder}/custom_apps/memories"
+            },
+            "sourceMapPathOverrides": {
+                "webpack:///memories/*": "${webRoot}/*",
+            }
         }
     ]
 }

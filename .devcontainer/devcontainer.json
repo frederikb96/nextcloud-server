@@ -15,7 +15,20 @@
 				"felixfbecker.php-intellisense",
 				"ms-azuretools.vscode-docker",
 				"xdebug.php-debug",
-				"donjayamanne.githistory"
+				"donjayamanne.githistory",
+				"adamvoss.vscode-languagetool",
+				"adamvoss.vscode-languagetool-en",
+				"bmewburn.vscode-intelephense-client",
+				"esbenp.prettier-vscode",
+				"GitHub.copilot",
+				"GitHub.copilot-chat",
+				"junstyle.php-cs-fixer",
+				"ms-vscode.makefile-tools",
+				"muuvmuuv.vscode-just-php-cs-fixer",
+				"Vue.volar",
+				"Vue.vscode-typescript-vue-plugin",
+				"yzhang.markdown-all-in-one",
+				"eamodio.gitlens"
 			],
 			"settings": {
 				"php.suggest.basic": false
@@ -23,5 +36,6 @@
 		}
 	},
 	"workspaceFolder": "/var/www/html",
-	"remoteUser": "devcontainer"
+	"remoteUser": "devcontainer",
+	"mounts": ["source=/home/freddy/.gitconfig,target=/home/devcontainer/.gitconfig,type=bind"]
 }
